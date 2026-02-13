@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
-    const { currentUser } = useAuth();
     const { t } = useTranslation();
-    const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState('');
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+    const [message, setMessage] = useState("");
 
     const [formData, setFormData] = useState({
         name: '',
@@ -18,135 +16,160 @@ const Profile = () => {
         village: '',
         mainCrop: 'Wheat',
         cropVariety: '',
-        sowingDate: '',
-        growthStage: 'Vegetative', // Sowing, Vegetative, Flowering, Harvesting
         landArea: '',
+        growthStage: 'Vegetative',
     });
 
-    // Load user data
     useEffect(() => {
-        const fetchUserData = async () => {
-            if (currentUser) {
-                const docRef = doc(db, "users", currentUser.uid);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setFormData({ ...formData, ...docSnap.data() });
-                }
-            }
-        };
-        fetchUserData();
-    }, [currentUser]);
+        // Load from LocalStorage
+        const storedUser = localStorage.getItem('currentUser');
+        if (!storedUser) {
+            navigate('/login');
+            return;
+        }
+
+        const savedProfile = localStorage.getItem('userProfile');
+        if (savedProfile) {
+            setFormData(JSON.parse(savedProfile));
+        }
+        setLoading(false);
+    }, [navigate]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        setLoading(true);
         try {
-            const docRef = doc(db, "users", currentUser.uid);
-            await updateDoc(docRef, formData);
-            setSuccess('Profile Updated Successfully!');
-            setTimeout(() => setSuccess(''), 3000);
+            setLoading(true);
+            // Mock Save
+            localStorage.setItem('userProfile', JSON.stringify(formData));
+            setMessage("Profile Updated (Locally) ✅");
         } catch (error) {
             console.error("Error updating profile:", error);
+            setMessage("Failed to update profile ❌");
+        } finally {
+            setLoading(false);
+            setTimeout(() => setMessage(""), 3000);
         }
-        setLoading(false);
     };
 
+    const handleLogout = () => {
+        localStorage.removeItem('currentUser');
+        navigate('/login');
+    };
+
+    if (loading) return <div className="p-8 text-center">Loading Profile...</div>;
+
     return (
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="max-w-xl mx-auto space-y-6 pb-20">
             <h1 className="text-2xl font-bold text-primary">{t('profile')}</h1>
 
-            {success && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">{success}</div>}
+            {/* Phone Number Display */}
+            <div className="bg-green-50 p-4 rounded-lg border border-green-100 flex items-center justify-between">
+                <div>
+                    <p className="text-xs text-green-800 font-bold uppercase">Registered Mobile</p>
+                    <p className="text-xl font-bold text-green-900">{formData.phone || '+911234567890'}</p>
+                </div>
+                <span className="text-2xl">📱</span>
+            </div>
 
-            <div className="bg-surface p-6 rounded-lg shadow-card">
-                <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-card space-y-4">
+                <h2 className="text-lg font-bold text-gray-800 border-b pb-2">Farmer Details</h2>
 
-                    {/* Section 1: Personal Info */}
+                {/* Name */}
+                <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Full Name</label>
+                    <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        className="w-full p-2 border rounded focus:ring-2 focus:ring-primary/50"
+                        placeholder="Enter your name"
+                    />
+                </div>
+
+                {/* Location Group */}
+                <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <h3 className="text-lg font-bold text-secondary mb-4 border-b pb-2">Personal Information</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-text font-medium mb-1">Name</label>
-                                <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-primary" />
-                            </div>
-                            <div>
-                                <label className="block text-text font-medium mb-1">Phone Number</label>
-                                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-primary" />
-                            </div>
-                        </div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">State</label>
+                        <select name="state" value={formData.state} onChange={handleChange} className="w-full p-2 border rounded">
+                            <option>Punjab</option>
+                            <option>Haryana</option>
+                            <option>Uttar Pradesh</option>
+                            <option>Madhya Pradesh</option>
+                            <option>Other</option>
+                        </select>
                     </div>
-
-                    {/* Section 2: Location */}
                     <div>
-                        <h3 className="text-lg font-bold text-secondary mb-4 border-b pb-2">Location</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-text font-medium mb-1">State</label>
-                                <select name="state" value={formData.state} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-primary">
-                                    <option value="Punjab">Punjab</option>
-                                    <option value="Haryana">Haryana</option>
-                                    <option value="Uttar Pradesh">Uttar Pradesh</option>
-                                    <option value="Madhya Pradesh">Madhya Pradesh</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-text font-medium mb-1">District</label>
-                                <input type="text" name="district" value={formData.district} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-primary" />
-                            </div>
-                            <div>
-                                <label className="block text-text font-medium mb-1">Village</label>
-                                <input type="text" name="village" value={formData.village} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-primary" />
-                            </div>
-                        </div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">District</label>
+                        <input type="text" name="district" value={formData.district} onChange={handleChange} className="w-full p-2 border rounded" placeholder="Ludhiana" />
                     </div>
+                </div>
 
-                    {/* Section 3: Farm Details */}
+                <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Village</label>
+                    <input type="text" name="village" value={formData.village} onChange={handleChange} className="w-full p-2 border rounded" placeholder="Village Name" />
+                </div>
+
+                <h2 className="text-lg font-bold text-gray-800 border-b pb-2 pt-4">Farm Details</h2>
+
+                {/* Crop Details */}
+                <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <h3 className="text-lg font-bold text-secondary mb-4 border-b pb-2">Crop Details</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-text font-medium mb-1">Main Crop</label>
-                                <select name="mainCrop" value={formData.mainCrop} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-primary">
-                                    <option value="Wheat">Wheat (Gehu)</option>
-                                    <option value="Rice">Rice (Dhan)</option>
-                                    <option value="Cotton">Cotton (Kapas)</option>
-                                    <option value="Sugarcane">Sugarcane (Ganna)</option>
-                                    <option value="Maize">Maize (Makka)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-text font-medium mb-1">Growth Stage</label>
-                                <select name="growthStage" value={formData.growthStage} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-primary">
-                                    <option value="Sowing">Sowing (Beejan)</option>
-                                    <option value="Vegetative">Vegetative (Badhwar)</option>
-                                    <option value="Flowering">Flowering (Phool aana)</option>
-                                    <option value="Harvesting">Harvesting (Katayi)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-text font-medium mb-1">Sowing Date</label>
-                                <input type="date" name="sowingDate" value={formData.sowingDate} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-primary" />
-                            </div>
-                            <div>
-                                <label className="block text-text font-medium mb-1">Land Area (Acres)</label>
-                                <input type="number" name="landArea" value={formData.landArea} onChange={handleChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-primary" />
-                            </div>
-                        </div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Main Crop</label>
+                        <select name="mainCrop" value={formData.mainCrop} onChange={handleChange} className="w-full p-2 border rounded">
+                            <option>Wheat</option>
+                            <option>Rice</option>
+                            <option>Cotton</option>
+                            <option>Sugarcane</option>
+                            <option>Maize</option>
+                        </select>
                     </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Land Area (Acres)</label>
+                        <input type="number" name="landArea" value={formData.landArea} onChange={handleChange} className="w-full p-2 border rounded" placeholder="e.g. 5" />
+                    </div>
+                </div>
 
+                <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Current Stage</label>
+                    <div className="flex space-x-2">
+                        {['Sowing', 'Vegetative', 'Flowering', 'Harvesting'].map(stage => (
+                            <button
+                                key={stage}
+                                type="button"
+                                onClick={() => setFormData({ ...formData, growthStage: stage })}
+                                className={`px-3 py-1 rounded-full text-xs font-bold border transition ${formData.growthStage === stage ? 'bg-green-100 border-green-500 text-green-800' : 'bg-white border-gray-200 text-gray-500'}`}
+                            >
+                                {stage}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="pt-4">
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-primary text-white font-bold py-3 rounded hover:bg-green-700 transition duration-300 shadow-md"
+                        className="w-full bg-primary text-white font-bold py-3 rounded hover:bg-green-800 transition shadow-md"
                     >
-                        {loading ? 'Saving...' : 'Save Profile'}
+                        {loading ? "Saving..." : "Save Profile (Local)"}
                     </button>
-                </form>
-            </div>
+                    {message && <p className="text-center mt-2 font-bold text-green-600">{message}</p>}
+                </div>
+            </form>
+
+            {/* Logout */}
+            <button
+                onClick={handleLogout}
+                className="w-full text-red-500 font-bold py-2 hover:bg-red-50 rounded"
+            >
+                Log Out (Mock)
+            </button>
         </div>
     );
 };

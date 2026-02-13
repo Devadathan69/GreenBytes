@@ -1,22 +1,26 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore } from "firebase/firestore"; // Import initializeFirestore
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
 
-// TODO: Replace with your app's Firebase project configuration
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyCKzm8qzOYwFjwVDf3_ur2t650UUK6iYV8",
+    authDomain: "cofarm-7217f.firebaseapp.com",
+    projectId: "cofarm-7217f",
+    storageBucket: "cofarm-7217f.firebasestorage.app",
+    messagingSenderId: "30419115423",
+    appId: "1:30419115423:web:34f4cd8fc2b4e4529b71aa"
 };
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// Initialize Firestore with settings to avoid some blocking issues
+export const db = initializeFirestore(app, {
+    experimentalForceLongPolling: true, // Force long polling to bypass some proxies/blockers
+});
+
 export const storage = getStorage(app);
 export const functions = getFunctions(app);
 export default app;

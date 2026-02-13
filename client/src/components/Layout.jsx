@@ -16,7 +16,6 @@ const Layout = () => {
         { path: '/soil-monitoring', label: t('soil_monitoring'), icon: '💧' },
         { path: '/calculators', label: t('calculators'), icon: '🧮' },
         { path: '/community', label: t('community'), icon: '👥' },
-        { path: '/market', label: t('market'), icon: '🛒' },
         { path: '/news', label: t('news'), icon: '📰' },
         { path: '/profile', label: t('profile'), icon: '👤' },
     ];
@@ -53,8 +52,8 @@ const Layout = () => {
                                 key={item.path}
                                 to={item.path}
                                 className={`flex items-center space-x-3 p-3 rounded-lg transition-colors duration-200 ${location.pathname === item.path
-                                        ? 'bg-primary/10 text-primary font-bold border-l-4 border-primary'
-                                        : 'text-gray-600 hover:bg-gray-100'
+                                    ? 'bg-primary/10 text-primary font-bold border-l-4 border-primary'
+                                    : 'text-gray-600 hover:bg-gray-100'
                                     }`}
                             >
                                 <span className="text-xl">{item.icon}</span>
@@ -77,8 +76,8 @@ const Layout = () => {
                         key={item.path}
                         to={item.path}
                         className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${location.pathname === item.path
-                                ? 'text-primary'
-                                : 'text-gray-500'
+                            ? 'text-primary'
+                            : 'text-gray-500'
                             }`}
                     >
                         <span className="text-xl">{item.icon}</span>

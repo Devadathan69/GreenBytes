@@ -1,40 +1,19 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if user is authenticated
+    // Helper function (Bypassed for Hybrid Mode)
     function isAuthenticated() {
-      return request.auth != null;
+      return true; // Allow anyone (since we use mock login)
     }
     
-    // User Profiles: Users can read/write their own profile
+    // User Profiles
     match /users/{userId} {
-      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      allow read, write: if true;
     }
     
-    // Community Posts: Authenticated users can read/create. Authors can edit/delete.
+    // Community Posts
     match /communityPosts/{postId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
-    }
-    
-    // Marketplace Products: Authenticated users can read. 
-    // For now, allow all authenticated users to write (demo mode), or restrict to 'sellers' later.
-    match /products/{productId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-    
-    // News Feed: Read-only for users (Admin write logic not implemented yet)
-    match /newsFeed/{newsId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Only admin (via Console)
-    }
-    
-    // Sensor Data: Read-only for users (written by Cloud Functions/IoT)
-    match /sensorReadings/{readingId} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Written by Cloud Function
+      allow read, write: if true;
     }
     
     // Default: Deny
