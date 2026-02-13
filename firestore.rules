@@ -5,40 +5,41 @@ service cloud.firestore {
     function isAuthenticated() {
       return request.auth != null;
     }
-
-    // Helper function to check if user is accessing their own data
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // Users collection
+    
+    // User Profiles: Users can read/write their own profile
     match /users/{userId} {
-      allow read, update: if isOwner(userId);
-      allow create: if isAuthenticated(); // Allow creation on sign up
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
     }
-
-    // Farms collection
-    match /farms/{farmId} {
-      allow read, write: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
-      allow create: if isAuthenticated();
-    }
-
-    // Crops collection
-     match /crops/{cropId} {
+    
+    // Community Posts: Authenticated users can read/create. Authors can edit/delete.
+    match /communityPosts/{postId} {
       allow read: if isAuthenticated();
-      allow write: if isAuthenticated(); // Adjust based on logic
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
     }
-
-    // Sensor Readings (IoT)
+    
+    // Marketplace Products: Authenticated users can read. 
+    // For now, allow all authenticated users to write (demo mode), or restrict to 'sellers' later.
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+    
+    // News Feed: Read-only for users (Admin write logic not implemented yet)
+    match /newsFeed/{newsId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only admin (via Console)
+    }
+    
+    // Sensor Data: Read-only for users (written by Cloud Functions/IoT)
     match /sensorReadings/{readingId} {
       allow read: if isAuthenticated();
-      allow create: if true; // Allow ESP32 to write (in production, use a dedicated auth token or function)
+      allow write: if false; // Written by Cloud Function
     }
-
-    // Disease Results
-    match /diseaseResults/{resultId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
+    
+    // Default: Deny
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

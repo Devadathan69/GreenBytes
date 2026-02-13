@@ -1,74 +1,102 @@
 import React from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { useTranslation } from 'react-i18next';
 
-const SoilMonitoring = () => {
-    // Mock Data
-    const weeklyData = [
-        { day: 'Mon', moisture: 65, humidity: 70 },
-        { day: 'Tue', moisture: 62, humidity: 68 },
-        { day: 'Wed', moisture: 58, humidity: 65 },
-        { day: 'Thu', moisture: 55, humidity: 60 },
-        { day: 'Fri', moisture: 60, humidity: 62 },
-        { day: 'Sat', moisture: 68, humidity: 75 },
-        { day: 'Sun', moisture: 72, humidity: 78 },
-    ];
+const SoilIndicator = ({ label, value, unit, status, icon }) => {
+    const getStatusColor = (s) => {
+        switch (s) {
+            case 'Good': return 'bg-green-100 text-green-800 border-green-200';
+            case 'Warning': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'Risk': return 'bg-red-100 text-red-800 border-red-200';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    };
 
     return (
-        <div className="space-y-8">
-            <h1 className="text-3xl font-bold text-primary">Soil & Environment Monitor</h1>
+        <div className={`p-4 rounded-lg border-2 ${getStatusColor(status)} flex items-center justify-between`}>
+            <div>
+                <p className="text-sm font-bold uppercase opacity-70 mb-1">{label}</p>
+                <p className="text-3xl font-bold">{value}<span className="text-lg font-normal ml-1">{unit}</span></p>
+            </div>
+            <div className="text-4xl">{icon}</div>
+        </div>
+    );
+};
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+const SoilMonitoring = () => {
+    const { t } = useTranslation();
 
-                {/* Soil Moisture Chart */}
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">Soil Moisture Trends</h2>
-                    <div className="h-72">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={weeklyData}>
-                                <defs>
-                                    <linearGradient id="colorMoisture" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#2E7D32" stopOpacity={0.8} />
-                                        <stop offset="95%" stopColor="#2E7D32" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <XAxis dataKey="day" />
-                                <YAxis />
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <Tooltip />
-                                <Area type="monotone" dataKey="moisture" stroke="#2E7D32" fillOpacity={1} fill="url(#colorMoisture)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <p className="mt-4 text-sm text-gray-600">
-                        Average Moisture: <span className="font-bold text-primary">62%</span> (Optimal)
-                    </p>
+    // Mock Real-time Data
+    const currentData = {
+        moisture: 62,
+        humidity: 58,
+        temperature: 28,
+        nitrogen: 'Medium',
+        phosphorus: 'Low',
+        potassium: 'High'
+    };
+
+    return (
+        <div className="max-w-2xl mx-auto space-y-6">
+            <h1 className="text-2xl font-bold text-primary">{t('soil_monitoring')}</h1>
+
+            {/* Live Status Header */}
+            <div className="flex items-center justify-between bg-surface p-4 rounded-lg shadow-card">
+                <div className="flex items-center space-x-2">
+                    <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                    <span className="text-gray-600 font-medium">Sensor Status: <span className="text-green-600">Online (ESP32)</span></span>
                 </div>
+                <span className="text-xs text-gray-400">Updated: Just now</span>
+            </div>
 
-                {/* Humidity Chart */}
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">Ambient Humidity</h2>
-                    <div className="h-72">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={weeklyData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="day" />
-                                <YAxis />
-                                <Tooltip />
-                                <Line type="monotone" dataKey="humidity" stroke="#3B82F6" strokeWidth={3} />
-                            </LineChart>
-                        </ResponsiveContainer>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Vital Indicators */}
+                <SoilIndicator
+                    label="Soil Moisture"
+                    value={currentData.moisture}
+                    unit="%"
+                    status={currentData.moisture > 40 ? 'Good' : 'Warning'}
+                    icon="💧"
+                />
+                <SoilIndicator
+                    label="Humidity"
+                    value={currentData.humidity}
+                    unit="%"
+                    status="Good"
+                    icon="☁️"
+                />
+                <SoilIndicator
+                    label="Temperature"
+                    value={currentData.temperature}
+                    unit="°C"
+                    status={currentData.temperature > 35 ? 'Risk' : 'Good'}
+                    icon="🌡️"
+                />
+            </div>
+
+            {/* NPK Status (Simplified) */}
+            <div className="bg-surface p-6 rounded-lg shadow-card">
+                <h3 className="text-lg font-bold text-secondary mb-4">Nutrient Levels (NPK)</h3>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-700">Nitrogen (N)</span>
+                        <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-bold">Medium</span>
                     </div>
-                    <p className="mt-4 text-sm text-gray-600">
-                        Average Humidity: <span className="font-bold text-blue-600">68%</span> (Moderate)
-                    </p>
+                    <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-700">Phosphorus (P)</span>
+                        <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-bold">Low - Add DAP</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-700">Potassium (K)</span>
+                        <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-bold">High</span>
+                    </div>
                 </div>
             </div>
 
-            {/* Recommendations based on data */}
-            <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
-                <h2 className="text-xl font-bold text-gray-800 mb-2">Smart Analysis</h2>
-                <p className="text-gray-700">
-                    Soil moisture is currently stable. Based on the forecast, you may need to irrigate lightly on <span className="font-bold">Thursday</span>.
+            {/* Action Card */}
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded shadow-sm">
+                <h3 className="font-bold text-blue-800 mb-1">Recommendation</h3>
+                <p className="text-blue-700 text-sm">
+                    Soil moisture is good, but phosphorus is low. Consider applying <strong>DAP fertilizer</strong> during the next irrigation cycle.
                 </p>
             </div>
         </div>

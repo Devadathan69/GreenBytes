@@ -7,15 +7,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: "#2E7D32", // Nature Green
-        secondary: "#81C784", // Light Green
-        accent: "#F9A825", // Harvest Gold
-        background: "#F1F8E9", // Light Pale Green
-        text: "#1B5E20", // Dark Green Text
+        primary: "#388E3C", // Deep Forest Green (Trust, Growth)
+        secondary: "#795548", // Earth Brown (Soil, Foundation)
+        accent: "#FBC02D", // Harvest Yellow (Yield, Optimism)
+        background: "#F5F5F0", // Off-white / Beige (Clean, Paper-like)
+        text: "#212121", // Almost Black (High Contrast for readability)
+        'text-light': "#757575", // Grey for secondary text
+        surface: "#FFFFFF", // White cards
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['Roboto', 'Noto Sans', 'sans-serif'], // Standard, clean fonts
       },
+      boxShadow: {
+        'card': '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)', // Simple Material-like shadow
+      }
     },
   },
   plugins: [],
