@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is accessing their own data
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read, update: if isOwner(userId);
+      allow create: if isAuthenticated(); // Allow creation on sign up
+    }
+
+    // Farms collection
+    match /farms/{farmId} {
+      allow read, write: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+      allow create: if isAuthenticated();
+    }
+
+    // Crops collection
+     match /crops/{cropId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated(); // Adjust based on logic
+    }
+
+    // Sensor Readings (IoT)
+    match /sensorReadings/{readingId} {
+      allow read: if isAuthenticated();
+      allow create: if true; // Allow ESP32 to write (in production, use a dedicated auth token or function)
+    }
+
+    // Disease Results
+    match /diseaseResults/{resultId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+    }
+  }
+}
