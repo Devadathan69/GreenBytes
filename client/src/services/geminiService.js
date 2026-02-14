@@ -125,3 +125,156 @@ export const analyzeSoilReport = async (file) => {
         };
     }
 };
+
+// ==========================================
+// CROP DISEASE DETECTION
+// ==========================================
+
+const CROP_DISEASE_PROMPT = `You are an expert agricultural plant pathologist. Analyze this image of a crop/plant/leaf for any diseases, pests, or health issues.
+
+Provide a detailed diagnosis. Return your response as a valid JSON object with this EXACT structure (no markdown, no code fences, just raw JSON):
+{
+    "diseaseName": "Name of the disease or 'Healthy' if no disease found",
+    "confidence": 85,
+    "severity": "Low / Moderate / High / Critical",
+    "symptoms": "Detailed description of visible symptoms",
+    "treatment": "Recommended chemical/conventional treatment steps",
+    "organic": "Organic/natural treatment alternatives",
+    "prevention": "How to prevent this disease in the future",
+    "causeDescription": "What causes this disease (pathogen, conditions, etc.)"
+}
+
+If the image is not a plant/leaf/crop, return:
+{ "diseaseName": "Not a plant image", "confidence": 0, "severity": "None", "symptoms": "Unable to analyze - this does not appear to be a plant image.", "treatment": "", "organic": "", "prevention": "", "causeDescription": "" }`;
+
+/**
+ * Analyze a crop image for disease using OpenRouter (Google Gemini 2.0 Flash).
+ * @param {File} file - The uploaded image file
+ * @param {string} cropName - Optional crop name for context
+ * @returns {Object} - Structured disease diagnosis
+ */
+export const analyzeCropDisease = async (file, cropName = '') => {
+    if (!OPENROUTER_API_KEY) {
+        throw new Error('OpenRouter API key not configured. Add VITE_OPENROUTER_API_KEY to .env');
+    }
+
+    const base64DataUrl = await fileToBase64(file);
+
+    const contextNote = cropName ? `\nContext: This is a ${cropName} plant.` : '';
+
+    const requestBody = {
+        model: 'google/gemini-2.0-flash-001',
+        messages: [
+            {
+                role: 'user',
+                content: [
+                    {
+                        type: 'image_url',
+                        image_url: { url: base64DataUrl }
+                    },
+                    {
+                        type: 'text',
+                        text: CROP_DISEASE_PROMPT + contextNote
+                    }
+                ]
+            }
+        ],
+        temperature: 0.2,
+        top_p: 0.8,
+        max_tokens: 2048
+    };
+
+    console.log('[CropDoctor] Sending image to OpenRouter...');
+
+    const response = await fetch(OPENROUTER_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'HTTP-Referer': window.location.origin,
+            'X-Title': 'CoFarm Crop Doctor'
+        },
+        body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        const errMsg = errData.error?.message || `API error: ${response.status}`;
+        console.error('[CropDoctor] API error:', errData);
+        throw new Error(errMsg);
+    }
+
+    const data = await response.json();
+    const textContent = data.choices?.[0]?.message?.content;
+
+    if (!textContent) {
+        throw new Error('No response from AI model');
+    }
+
+    const cleanJson = textContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    try {
+        return JSON.parse(cleanJson);
+    } catch {
+        console.error('Failed to parse CropDoctor response:', textContent);
+        return {
+            diseaseName: 'Analysis Error',
+            confidence: 0,
+            severity: 'Unknown',
+            symptoms: textContent.substring(0, 300),
+            treatment: 'Could not parse structured data. Please try again.',
+            organic: '',
+            prevention: '',
+            causeDescription: ''
+        };
+    }
+};
+
+/**
+ * Ask a follow-up question to the Crop Doctor assistant (text-only, context-aware).
+ * @param {string} question - User's question
+ * @param {Object} diagnosisContext - The disease diagnosis result for context
+ * @param {string} cropName - Crop name
+ * @param {string} zoneName - Zone name
+ * @returns {string} - AI response text
+ */
+export const askCropDoctorQuestion = async (question, diagnosisContext, cropName = '', zoneName = '') => {
+    if (!OPENROUTER_API_KEY) {
+        throw new Error('OpenRouter API key not configured');
+    }
+
+    const systemPrompt = `You are a helpful agricultural assistant specializing in crop diseases. 
+You are helping a farmer who has a ${cropName} crop in ${zoneName}.
+The diagnosis found: ${diagnosisContext.diseaseName} (${diagnosisContext.severity} severity).
+Symptoms: ${diagnosisContext.symptoms}
+Treatment: ${diagnosisContext.treatment}
+
+Answer the farmer's question concisely and practically. Keep answers under 3 sentences unless more detail is needed. Be specific to their crop and situation.`;
+
+    const requestBody = {
+        model: 'google/gemini-2.0-flash-001',
+        messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: question }
+        ],
+        temperature: 0.4,
+        max_tokens: 512
+    };
+
+    const response = await fetch(OPENROUTER_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'HTTP-Referer': window.location.origin,
+            'X-Title': 'CoFarm Crop Doctor Assistant'
+        },
+        body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || 'Sorry, I could not generate a response. Please try again.';
+};

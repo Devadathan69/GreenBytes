@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { db, realtimeDb } from '../firebase';
 import { collection, query, onSnapshot, addDoc, serverTimestamp, doc, setDoc, getDocs } from 'firebase/firestore';
 import { ref, onValue, off } from 'firebase/database';
+import { sendWaterCloggingAlert, clearCloggingAlert } from '../services/notificationService';
 
 const CropContext = createContext();
 
@@ -73,6 +74,8 @@ export const CropProvider = ({ children }) => {
         return () => unsub();
     }, [currentUser, selectedCrop]);
 
+
+
     // Listen to RTDB sensor data for all modules assigned to current zones
     useEffect(() => {
         if (zones.length === 0) { setSensorData({}); return; }
@@ -80,6 +83,9 @@ export const CropProvider = ({ children }) => {
         // Collect unique moduleIds from zones
         const moduleIds = [...new Set(zones.map(z => z.moduleId).filter(Boolean))];
         const listeners = [];
+
+        // Timers for sustained moisture threshold (moisturePercent > 15 for 10s)
+        const moistureTimers = {};
 
         // Map from onboarding module name to RTDB path
         const MODULE_TO_RTDB = {
@@ -96,12 +102,49 @@ export const CropProvider = ({ children }) => {
             const listener = onValue(sensorRef, (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
+                    const moisturePct = data.moisturePercent ?? 0;
+                    const isAboveThreshold = moisturePct > 15;
+
+                    if (isAboveThreshold && !moistureTimers[moduleId]) {
+                        // Start 10-second timer
+                        moistureTimers[moduleId] = setTimeout(() => {
+                            setSensorData(prev => ({
+                                ...prev,
+                                [moduleId]: {
+                                    ...prev[moduleId],
+                                    waterLogging: true,
+                                }
+                            }));
+
+                            // Trigger Email Notification
+                            const zone = zones.find(z => z.moduleId === moduleId);
+                            if (zone) {
+                                sendWaterCloggingAlert({
+                                    zoneName: zone.name,
+                                    cropName: selectedCrop?.name || 'Unknown Crop',
+                                    moduleId: moduleId,
+                                    moisturePercent: moisturePct,
+                                    moistureValue: data.moistureValue
+                                });
+                            }
+                        }, 10000);
+                    } else if (!isAboveThreshold) {
+                        // Clear timer and reset warning
+                        if (moistureTimers[moduleId]) {
+                            clearTimeout(moistureTimers[moduleId]);
+                            moistureTimers[moduleId] = null;
+                        }
+                        // Reset notification state so it can fire again next time
+                        clearCloggingAlert(moduleId);
+                    }
+
                     setSensorData(prev => ({
                         ...prev,
                         [moduleId]: {
-                            moisturePercent: data.moisturePercent ?? null,
+                            moisturePercent: moisturePct,
                             moistureValue: data.moistureValue ?? null,
-                            waterLogging: data.waterLogging ?? false,
+                            // Keep existing waterLogging state (managed by timer above)
+                            waterLogging: isAboveThreshold ? (prev[moduleId]?.waterLogging ?? false) : false,
                             connected: true,
                             lastUpdated: new Date().toLocaleTimeString()
                         }
@@ -125,8 +168,10 @@ export const CropProvider = ({ children }) => {
 
         return () => {
             listeners.forEach(({ sensorRef }) => off(sensorRef));
+            // Clear all pending timers
+            Object.values(moistureTimers).forEach(t => t && clearTimeout(t));
         };
-    }, [zones]);
+    }, [zones, selectedCrop]); // Added selectedCrop dependency for notification context
 
     // Load soil reports when selectedCrop changes
     useEffect(() => {

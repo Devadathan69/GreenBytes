@@ -6,6 +6,7 @@
 
 /* ========== CROP-BASED DYNAMIC THEMING ========== */
 :root {
+  font-size: 17px;
   /* Default: Cardamom (Green) */
   --color-primary: #388E3C;
   --color-primary-light: #E8F5E9;
