@@ -1,174 +1,134 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCrop } from '../context/CropContext';
 import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);
-    const [message, setMessage] = useState("");
-
-    const [formData, setFormData] = useState({
-        name: '',
-        phone: '',
-        state: 'Punjab',
-        district: '',
-        village: '',
-        mainCrop: 'Wheat',
-        cropVariety: '',
-        landArea: '',
-        growthStage: 'Vegetative',
-    });
-
-    useEffect(() => {
-        // Load from LocalStorage
-        const storedUser = localStorage.getItem('currentUser');
-        if (!storedUser) {
-            navigate('/login');
-            return;
-        }
-
-        const savedProfile = localStorage.getItem('userProfile');
-        if (savedProfile) {
-            setFormData(JSON.parse(savedProfile));
-        }
-        setLoading(false);
-    }, [navigate]);
-
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        try {
-            setLoading(true);
-            // Mock Save
-            localStorage.setItem('userProfile', JSON.stringify(formData));
-            setMessage("Profile Updated (Locally) ✅");
-        } catch (error) {
-            console.error("Error updating profile:", error);
-            setMessage("Failed to update profile ❌");
-        } finally {
-            setLoading(false);
-            setTimeout(() => setMessage(""), 3000);
-        }
-    };
+    const { crops, zones, currentUser, selectedCrop } = useCrop();
+    const [showLanguage, setShowLanguage] = useState(false);
 
     const handleLogout = () => {
-        localStorage.removeItem('currentUser');
-        navigate('/login');
+        localStorage.clear();
+        navigate('/language');
     };
 
-    if (loading) return <div className="p-8 text-center">Loading Profile...</div>;
+    const changeLanguage = (lang) => {
+        i18n.changeLanguage(lang);
+        localStorage.setItem('language', lang);
+        setShowLanguage(false);
+    };
+
+    const getCurrentLanguageName = () => {
+        const langs = { en: 'English', hi: 'हिन्दी', ml: 'മലയാളം', ta: 'தமிழ்', te: 'తెలుగు', kn: 'ಕನ್ನಡ' };
+        return langs[i18n.language] || 'English';
+    };
 
     return (
-        <div className="max-w-xl mx-auto space-y-6 pb-20">
-            <h1 className="text-2xl font-bold text-primary">{t('profile')}</h1>
+        <div className="max-w-xl mx-auto space-y-5 pb-20">
 
-            {/* Phone Number Display */}
-            <div className="bg-green-50 p-4 rounded-lg border border-green-100 flex items-center justify-between">
-                <div>
-                    <p className="text-xs text-green-800 font-bold uppercase">Registered Mobile</p>
-                    <p className="text-xl font-bold text-green-900">{formData.phone || '+911234567890'}</p>
+            {/* User Card */}
+            <div className="bg-gradient-to-br from-primary to-primary-dark text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
+                <div className="relative z-10">
+                    <div className="flex items-center space-x-4">
+                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-3xl">
+                            👤
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold">{currentUser?.displayName || 'Farmer'}</h2>
+                            <p className="text-white/70 text-sm">{currentUser?.phoneNumber || ''}</p>
+                            {currentUser?.email && <p className="text-white/70 text-xs">{currentUser.email}</p>}
+                        </div>
+                    </div>
+                    <div className="flex items-center mt-3 space-x-4 text-xs text-white/60">
+                        <span>🌾 {crops.length} {t('zones')}</span>
+                        <span>📡 {zones.length} {t('module')}</span>
+                    </div>
                 </div>
-                <span className="text-2xl">📱</span>
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-2xl"></div>
             </div>
 
-            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-card space-y-4">
-                <h2 className="text-lg font-bold text-gray-800 border-b pb-2">Farmer Details</h2>
-
-                {/* Name */}
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Full Name</label>
-                    <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-primary/50"
-                        placeholder="Enter your name"
-                    />
-                </div>
-
-                {/* Location Group */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">State</label>
-                        <select name="state" value={formData.state} onChange={handleChange} className="w-full p-2 border rounded">
-                            <option>Punjab</option>
-                            <option>Haryana</option>
-                            <option>Uttar Pradesh</option>
-                            <option>Madhya Pradesh</option>
-                            <option>Other</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">District</label>
-                        <input type="text" name="district" value={formData.district} onChange={handleChange} className="w-full p-2 border rounded" placeholder="Ludhiana" />
-                    </div>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Village</label>
-                    <input type="text" name="village" value={formData.village} onChange={handleChange} className="w-full p-2 border rounded" placeholder="Village Name" />
-                </div>
-
-                <h2 className="text-lg font-bold text-gray-800 border-b pb-2 pt-4">Farm Details</h2>
-
-                {/* Crop Details */}
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">Main Crop</label>
-                        <select name="mainCrop" value={formData.mainCrop} onChange={handleChange} className="w-full p-2 border rounded">
-                            <option>Wheat</option>
-                            <option>Rice</option>
-                            <option>Cotton</option>
-                            <option>Sugarcane</option>
-                            <option>Maize</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">Land Area (Acres)</label>
-                        <input type="number" name="landArea" value={formData.landArea} onChange={handleChange} className="w-full p-2 border rounded" placeholder="e.g. 5" />
-                    </div>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Current Stage</label>
-                    <div className="flex space-x-2">
-                        {['Sowing', 'Vegetative', 'Flowering', 'Harvesting'].map(stage => (
-                            <button
-                                key={stage}
-                                type="button"
-                                onClick={() => setFormData({ ...formData, growthStage: stage })}
-                                className={`px-3 py-1 rounded-full text-xs font-bold border transition ${formData.growthStage === stage ? 'bg-green-100 border-green-500 text-green-800' : 'bg-white border-gray-200 text-gray-500'}`}
-                            >
-                                {stage}
-                            </button>
+            {/* My Crops */}
+            <div>
+                <h3 className="text-sm font-bold text-gray-800 mb-2">{t('my_crops')}</h3>
+                {crops.length > 0 ? (
+                    <div className="space-y-2">
+                        {crops.map(crop => (
+                            <div key={crop.id} className={`bg-white p-3.5 rounded-xl shadow-sm border flex items-center space-x-3 ${selectedCrop?.id === crop.id ? 'border-primary' : 'border-gray-100'}`}>
+                                <span className="text-2xl">{crop.icon}</span>
+                                <div className="flex-1">
+                                    <p className="font-bold text-gray-800">{crop.name}</p>
+                                    <p className="text-xs text-gray-400">{crop.variety || 'Standard'}</p>
+                                </div>
+                                {selectedCrop?.id === crop.id && (
+                                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">Active</span>
+                                )}
+                            </div>
                         ))}
                     </div>
-                </div>
+                ) : (
+                    <p className="text-gray-400 text-sm text-center py-4">{t('no_crops')}</p>
+                )}
+            </div>
 
-                {/* Submit Button */}
-                <div className="pt-4">
+            {/* Settings */}
+            <div>
+                <h3 className="text-sm font-bold text-gray-800 mb-2">{t('app_settings')}</h3>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-50">
+                    {/* Language */}
                     <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-primary text-white font-bold py-3 rounded hover:bg-green-800 transition shadow-md"
+                        onClick={() => setShowLanguage(!showLanguage)}
+                        className="w-full flex justify-between items-center p-4"
                     >
-                        {loading ? "Saving..." : "Save Profile (Local)"}
+                        <div className="flex items-center space-x-3">
+                            <span className="text-lg">🌐</span>
+                            <span className="text-sm font-medium text-gray-700">{t('language')}</span>
+                        </div>
+                        <span className="text-sm text-gray-400">{getCurrentLanguageName()} ▸</span>
                     </button>
-                    {message && <p className="text-center mt-2 font-bold text-green-600">{message}</p>}
+
+                    {showLanguage && (
+                        <div className="p-3 grid grid-cols-3 gap-2 bg-gray-50">
+                            {[
+                                { code: 'en', label: 'English' },
+                                { code: 'hi', label: 'हिन्दी' },
+                                { code: 'ml', label: 'മലയാളം' },
+                                { code: 'ta', label: 'தமிழ்' },
+                                { code: 'te', label: 'తెలుగు' },
+                                { code: 'kn', label: 'ಕನ್ನಡ' },
+                            ].map(lang => (
+                                <button
+                                    key={lang.code}
+                                    onClick={() => changeLanguage(lang.code)}
+                                    className={`text-xs font-bold py-2 rounded-lg transition active:scale-95 ${i18n.language === lang.code
+                                        ? 'bg-primary text-white'
+                                        : 'bg-white border border-gray-200 text-gray-600'
+                                        }`}
+                                >
+                                    {lang.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Export/Reset */}
+                    <button className="w-full flex justify-between items-center p-4">
+                        <div className="flex items-center space-x-3">
+                            <span className="text-lg">📤</span>
+                            <span className="text-sm font-medium text-gray-700">{t('export_data')}</span>
+                        </div>
+                        <span className="text-gray-300">▸</span>
+                    </button>
                 </div>
-            </form>
+            </div>
 
             {/* Logout */}
             <button
                 onClick={handleLogout}
-                className="w-full text-red-500 font-bold py-2 hover:bg-red-50 rounded"
+                className="w-full bg-red-50 text-red-600 font-bold py-3 rounded-xl border border-red-100 active:scale-[0.98] transition"
             >
-                Log Out (Mock)
+                {t('logout')}
             </button>
         </div>
     );

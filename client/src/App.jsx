@@ -1,41 +1,62 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { CropProvider } from './context/CropContext';
+
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
-import DiseaseDetection from './pages/DiseaseDetection';
-import SoilMonitoring from './pages/SoilMonitoring';
+import CropDoctor from './pages/CropDoctor';
+import Marketplace from './pages/Marketplace';
 import Profile from './pages/Profile';
-import Login from './pages/Login';
-import Calculators from './pages/Calculators';
-import Cultivation from './pages/Cultivation';
 import Community from './pages/Community';
-import News from './pages/News';
-import './i18n';
+import LanguageSelection from './pages/LanguageSelection';
+import Login from './pages/Login';
+import Onboarding from './pages/Onboarding';
+
+// Smart redirect based on auth state
+const AuthRedirect = () => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (!storedUser) {
+        return <Navigate to="/language" replace />;
+    }
+    try {
+        const user = JSON.parse(storedUser);
+        const isOnboarded = localStorage.getItem(`onboarding_${user.uid}`);
+        if (isOnboarded) {
+            return <Navigate to="/dashboard" replace />;
+        }
+        return <Navigate to="/onboarding" replace />;
+    } catch {
+        return <Navigate to="/language" replace />;
+    }
+};
 
 function App() {
     return (
-        <AuthProvider>
+        <CropProvider>
             <Router>
                 <Routes>
+                    {/* Entry Flow */}
+                    <Route path="/language" element={<LanguageSelection />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/onboarding" element={<Onboarding />} />
 
-                    {/* Protected Routes */}
+                    {/* Main App (with Layout) */}
                     <Route path="/" element={<Layout />}>
                         <Route index element={<Navigate to="/dashboard" replace />} />
                         <Route path="dashboard" element={<Dashboard />} />
-                        <Route path="disease-detection" element={<DiseaseDetection />} />
-                        <Route path="soil-monitoring" element={<SoilMonitoring />} />
-                        <Route path="calculators" element={<Calculators />} />
-                        <Route path="cultivation" element={<Cultivation />} />
+                        <Route path="crop-doctor" element={<CropDoctor />} />
                         <Route path="community" element={<Community />} />
-                        <Route path="news" element={<News />} />
+                        <Route path="market" element={<Marketplace />} />
                         <Route path="profile" element={<Profile />} />
                     </Route>
+
+                    {/* Catch-all: smart redirect based on auth state */}
+                    <Route path="*" element={<AuthRedirect />} />
                 </Routes>
             </Router>
-        </AuthProvider>
+        </CropProvider>
     );
 }
 
 export default App;
+
