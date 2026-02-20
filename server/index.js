@@ -4,7 +4,15 @@ const cors = require('cors');
 const { Resend } = require('resend');
 
 const app = express();
-app.use(cors());
+
+// Allow requests from your production frontend URL (or everything during dev)
+const allowedOrigin = process.env.CORS_ORIGIN || '*';
+app.use(cors({
+    origin: allowedOrigin,
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type']
+}));
+
 app.use(express.json());
 
 // ============================================
